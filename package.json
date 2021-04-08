@@ -1,0 +1,33 @@
+{
+	"name": "qlik-auth-windows",
+	"description": "SvelteKit companion repo for blog post",
+	"version": "0.0.1",
+	"license": "MIT",
+	"author": {
+		"name": "Stefan Stoichev @countnazgul",
+		"email": "stefan.stoichev@gmail.com",
+		"url": "https://sstoichev.eu"
+	},
+	"scripts": {
+		"dev": "svelte-kit dev",
+		"build": "svelte-kit build",
+		"start": "svelte-kit start",
+		"lint": "prettier --check .",
+		"format": "prettier --write ."
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "next",
+		"@sveltejs/kit": "next",
+		"svelte": "^3.29.0",
+		"vite": "^2.1.0",
+		"prettier": "~2.2.1",
+		"prettier-plugin-svelte": "^2.2.0"
+	},
+	"type": "module",
+	"dependencies": {
+		"enigma.js": "^2.7.2"
+	},
+	"prettier": {
+		"singleQuote": false
+	}
+}
