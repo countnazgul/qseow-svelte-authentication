@@ -1,4 +1,4 @@
-`SvelteKit` companion repo for [blog post](sstoichev.eu/qseow-authentication-svelte)
+`SvelteKit` companion repo for [blog post](https://sstoichev.eu/qseow-authentication-svelte)
 
 ### Install
 
