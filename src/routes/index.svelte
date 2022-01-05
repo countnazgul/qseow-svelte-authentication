@@ -1,8 +1,8 @@
 <script context="module">
   export const ssr = false;
 
-  export const load = async ({ page }) => {
-    let qlikTicket = page.query.get("qlikTicket");
+  export const load = async ({ url, params }) => {
+    let qlikTicket = url.searchParams.get("qlikTicket");
     return { props: { qlikTicket } };
   };
 </script>

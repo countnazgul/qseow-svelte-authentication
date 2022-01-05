@@ -1,5 +1,5 @@
 /**
- * @param {Record<string, string | string[]>} headers
+ * @param {Record<string, string | string[] | undefined>} headers
  * @param {string} key
  * @returns {string | undefined}
  * @throws {Error}
@@ -598,7 +598,7 @@ async function render_response({
 				navigating: writable(null),
 				session
 			},
-			page: { url, params },
+			page: { url, params, status, error },
 			components: branch.map(({ node }) => node.module.default)
 		};
 

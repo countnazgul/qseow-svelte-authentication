@@ -162,16 +162,17 @@ class Router {
 
 			if (!this.owns(url)) return;
 
-			const noscroll = a.hasAttribute('sveltekit:noscroll');
-
-			const i1 = url_string.indexOf('#');
-			const i2 = location.href.indexOf('#');
-			const u1 = i1 >= 0 ? url_string.substring(0, i1) : url_string;
-			const u2 = i2 >= 0 ? location.href.substring(0, i2) : location.href;
-			history.pushState({}, '', url.href);
-			if (u1 === u2) {
-				window.dispatchEvent(new HashChangeEvent('hashchange'));
+			// Check if new url only differs by hash
+			if (url.href.split('#')[0] === location.href.split('#')[0]) {
+				// Call `pushState` to add url to history so going back works.
+				// Also make a delay, otherwise the browser default behaviour would not kick in
+				setTimeout(() => history.pushState({}, '', url.href));
+				return;
 			}
+
+			history.pushState({}, '', url.href);
+
+			const noscroll = a.hasAttribute('sveltekit:noscroll');
 			this._navigate(url, noscroll ? scroll_state() : null, false, [], url.hash);
 			event.preventDefault();
 		});
@@ -466,6 +467,8 @@ class Renderer {
 		this.session_id = 1;
 		this.invalid = new Set();
 		this.invalidating = null;
+		this.autoscroll = true;
+		this.updating = false;
 
 		/** @type {import('./types').NavigationState} */
 		this.current = {
@@ -506,6 +509,16 @@ class Renderer {
 			if (info) this.update(info, [], true);
 		});
 		ready = true;
+	}
+
+	disable_scroll_handling() {
+		if (import.meta.env.DEV && this.started && !this.updating) {
+			throw new Error('Can only disable scroll handling during navigation');
+		}
+
+		if (this.updating || !this.started) {
+			this.autoscroll = false;
+		}
 	}
 
 	/**
@@ -563,7 +576,7 @@ class Renderer {
 
 			result = error_args
 				? await this._load_error(error_args)
-				: await this._get_navigation_result_from_branch({ url, params, branch });
+				: await this._get_navigation_result_from_branch({ url, params, branch, status, error });
 		} catch (e) {
 			if (error) throw e;
 
@@ -637,6 +650,8 @@ class Renderer {
 			}
 		}
 
+		this.updating = true;
+
 		if (this.started) {
 			this.current = navigation_result.state;
 
@@ -655,26 +670,9 @@ class Renderer {
 				document.body.focus();
 			}
 
-			const old_page_y_offset = Math.round(pageYOffset);
-			const old_max_page_y_offset = document.documentElement.scrollHeight - innerHeight;
-
 			await 0;
 
-			const new_page_y_offset = Math.round(pageYOffset);
-			const new_max_page_y_offset = document.documentElement.scrollHeight - innerHeight;
-
-			// After `await 0`, the `onMount()` function in the component executed.
-			// Check if no scrolling happened on mount.
-			const no_scroll_happened =
-				// In most cases, we can compare whether `pageYOffset` changed between navigation
-				new_page_y_offset === Math.min(old_page_y_offset, new_max_page_y_offset) ||
-				// But if the page is scrolled to/near the bottom, the browser would also scroll
-				// to/near the bottom of the new page on navigation. Since we can't detect when this
-				// behaviour happens, we naively compare by the y offset from the bottom of the page.
-				old_max_page_y_offset - old_page_y_offset === new_max_page_y_offset - new_page_y_offset;
-
-			// If there was no scrolling, we run on our custom scroll handling
-			if (no_scroll_happened) {
+			if (this.autoscroll) {
 				const deep_linked = hash && document.getElementById(hash.slice(1));
 				if (scroll) {
 					scrollTo(scroll.x, scroll.y);
@@ -694,6 +692,8 @@ class Renderer {
 
 		this.loading.promise = null;
 		this.loading.id = null;
+		this.autoscroll = true;
+		this.updating = false;
 
 		if (!this.router) return;
 
@@ -800,9 +800,11 @@ class Renderer {
 	 *   url: URL;
 	 *   params: Record<string, string>;
 	 *   branch: Array<import('./types').BranchNode | undefined>;
+	 *   status: number;
+	 *   error?: Error;
 	 * }} opts
 	 */
-	async _get_navigation_result_from_branch({ url, params, branch }) {
+	async _get_navigation_result_from_branch({ url, params, branch, status, error }) {
 		const filtered = /** @type {import('./types').BranchNode[] } */ (branch.filter(Boolean));
 		const redirect = filtered.find((f) => f.loaded && f.loaded.redirect);
 
@@ -826,7 +828,7 @@ class Renderer {
 		}
 
 		if (!this.current.url || url.href !== this.current.url.href) {
-			result.props.page = { url, params };
+			result.props.page = { url, params, status, error };
 
 			// TODO remove this for 1.0
 			/**
@@ -1120,12 +1122,12 @@ class Renderer {
 			}
 		}
 
-		return await this._get_navigation_result_from_branch({ url, params, branch });
+		return await this._get_navigation_result_from_branch({ url, params, branch, status, error });
 	}
 
 	/**
 	 * @param {{
-	 *   status?: number;
+	 *   status: number;
 	 *   error: Error;
 	 *   url: URL;
 	 * }} opts
@@ -1153,7 +1155,7 @@ class Renderer {
 			})
 		];
 
-		return await this._get_navigation_result_from_branch({ url, params, branch });
+		return await this._get_navigation_result_from_branch({ url, params, branch, status, error });
 	}
 }
 
@@ -1200,7 +1202,7 @@ async function start({ paths, target, session, route, spa, trailing_slash, hydra
 		  })
 		: null;
 
-	init(router);
+	init({ router, renderer });
 	set_paths(paths);
 
 	if (hydrate) await renderer.start(hydrate);

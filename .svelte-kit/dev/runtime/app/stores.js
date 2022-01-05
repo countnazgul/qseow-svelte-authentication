@@ -57,7 +57,7 @@ const navigating = {
 };
 
 /** @param {string} verb */
-const error = (verb) => {
+const throw_error = (verb) => {
 	throw new Error(
 		ssr
 			? `Can only ${verb} session store in browser`
@@ -77,8 +77,8 @@ const session = {
 
 		return store.subscribe(fn);
 	},
-	set: () => error('set'),
-	update: () => error('update')
+	set: () => throw_error('set'),
+	update: () => throw_error('update')
 };
 
 export { getStores, navigating, page, session, stores };

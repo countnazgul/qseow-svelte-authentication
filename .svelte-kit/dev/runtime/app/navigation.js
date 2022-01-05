@@ -1,4 +1,4 @@
-import { router as router$1 } from '../internal/singletons.js';
+import { renderer, router as router$1 } from '../internal/singletons.js';
 import { g as get_base_uri } from '../chunks/utils.js';
 
 const router = /** @type {import('../client/router').Router} */ (router$1);
@@ -12,10 +12,20 @@ function guard(name) {
 	};
 }
 
+const disableScrollHandling = import.meta.env.SSR
+	? guard('disableScrollHandling')
+	: disableScrollHandling_;
 const goto = import.meta.env.SSR ? guard('goto') : goto_;
 const invalidate = import.meta.env.SSR ? guard('invalidate') : invalidate_;
 const prefetch = import.meta.env.SSR ? guard('prefetch') : prefetch_;
 const prefetchRoutes = import.meta.env.SSR ? guard('prefetchRoutes') : prefetchRoutes_;
+
+/**
+ * @type {import('$app/navigation').goto}
+ */
+async function disableScrollHandling_() {
+	renderer.disable_scroll_handling();
+}
 
 /**
  * @type {import('$app/navigation').goto}
@@ -52,4 +62,4 @@ async function prefetchRoutes_(pathnames) {
 	await Promise.all(promises);
 }
 
-export { goto, invalidate, prefetch, prefetchRoutes };
+export { disableScrollHandling, goto, invalidate, prefetch, prefetchRoutes };
